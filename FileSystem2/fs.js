@@ -1,12 +1,6 @@
 //1. Synchronus
 //1.1 file read / I/o intensive task -> not go to thread pool -> 
 
-
-
-
-//2. Asynchronous
-//2.2 file read -> single thread -> thread pool -> completion
-
 //reading text from hello.txt file and writing
 const fs = require('fs')
 console.log('task 1')
