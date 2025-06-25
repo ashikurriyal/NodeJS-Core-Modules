@@ -17,6 +17,7 @@ fs.writeFile("./hello.txt", text, { encoding: "utf-8" }, (err) => {
 
   console.log('Written Successfully')
 });
+
 fs.readFile("./hello.txt", { encoding: "utf-8" }, (err, data) => {
   if (err) {
     console.error("Error reading file:", err);
