@@ -108,7 +108,40 @@ const server = http.createServer((req, res) => {
         )
       );
     });
-  } else {
+  }
+
+  //Delete Todo
+  // Delete Todo
+else if (pathname === "/todos/delete-todo" && req.method === "DELETE") {
+  const title = url.searchParams.get("title");
+
+  // Read existing todos
+  const data = fs.readFileSync(filePath, { encoding: "utf-8" });
+  const parsedTodos = JSON.parse(data);
+
+  // Find index of the todo to delete
+  const index = parsedTodos.findIndex(
+    (todo) => todo.title.toLowerCase().trim() === title.toLowerCase().trim()
+  );
+
+  if (index === -1) {
+    res.writeHead(404, { "content-type": "application/json" });
+    return res.end(JSON.stringify({ message: "Todo not found" }));
+  }
+
+  // Remove the todo
+  const deletedTodo = parsedTodos.splice(index, 1)[0];
+
+  // Save updated data
+  fs.writeFileSync(filePath, JSON.stringify(parsedTodos, null, 2), {
+    encoding: "utf-8",
+  });
+
+  // Respond with deleted todo
+  res.writeHead(200, { "content-type": "application/json" });
+  res.end(JSON.stringify({ message: "Todo deleted", todo: deletedTodo }, null, 2));
+}
+ else {
     res.end("Route Not Found");
   }
 });
