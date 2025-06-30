@@ -5,10 +5,11 @@ const fs = require("fs");
 const filePath = path.join(__dirname, "./db/todo.json");
 
 const server = http.createServer((req, res) => {
-  console.log(req.url, req.method);
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const pathname = url.pathname;
 
   //Get all-todos
-  if (req.url === "/todos" && req.method === "GET") {
+  if (pathname === "/todos" && req.method === "GET") {
     const data = fs.readFileSync(filePath, { encoding: "utf-8" });
 
     //One way
@@ -24,7 +25,7 @@ const server = http.createServer((req, res) => {
     // res.end(JSON.stringify(data))
 
     //post a todo
-  } else if (req.url === "/todos/create-todo" && req.method === "POST") {
+  } else if (pathname === "/todos/create-todo" && req.method === "POST") {
     let data = "";
     req.on("data", (chunk) => {
       data = data + chunk;
@@ -34,11 +35,78 @@ const server = http.createServer((req, res) => {
       const { title, body } = JSON.parse(data);
       const createdAt = new Date().toLocaleString();
       const allTodos = fs.readFileSync(filePath, { encoding: "utf-8" });
-      const parsedAllTodos = JSON.parse(allTodos)
+      const parsedAllTodos = JSON.parse(allTodos);
       parsedAllTodos.push({ title, body, createdAt });
 
-      fs.writeFileSync(filePath, JSON.stringify(parsedAllTodos, null, 2), { encoding: "utf-8" });
+      fs.writeFileSync(filePath, JSON.stringify(parsedAllTodos, null, 2), {
+        encoding: "utf-8",
+      });
       res.end(JSON.stringify({ title, body, createdAt }, null, 2));
+    });
+  } else if (pathname === "/todo" && req.method === "GET") {
+    const title = url.searchParams.get("title");
+    console.log("Title from query:", title);
+
+    // Read the todos
+    const data = fs.readFileSync(filePath, { encoding: "utf-8" });
+    const parsedData = JSON.parse(data);
+
+    // Find todo by title (case-insensitive match)
+    const todo = parsedData.find(
+      (todo) => todo.title.toLowerCase().trim() === title.toLowerCase().trim()
+    );
+
+    // If not found, send 404
+    if (!todo) {
+      res.writeHead(404, { "content-type": "application/json" });
+      return res.end(JSON.stringify({ message: "Todo not found" }));
+    }
+
+    // If found, send the todo
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify(todo, null, 2));
+  }
+
+  //patch
+  else if (pathname === "/todos/update-todo" && req.method === "PATCH") {
+    const title = url.searchParams.get("title");
+    let data = "";
+    req.on("data", (chunk) => {
+      data += chunk;
+    });
+
+    req.on("end", () => {
+      const { body } = JSON.parse(data);
+      const allTodos = fs.readFileSync(filePath, { encoding: "utf-8" });
+      const parsedAllTodos = JSON.parse(allTodos);
+
+      const todoIndex = parsedAllTodos.findIndex(
+        (todo) => todo.title.toLowerCase().trim() === title.toLowerCase().trim()
+      );
+
+      if (todoIndex === -1) {
+        res.writeHead(404, { "content-type": "application/json" });
+        return res.end(JSON.stringify({ message: "Todo not found" }));
+      }
+
+      parsedAllTodos[todoIndex].body = body;
+
+      fs.writeFileSync(filePath, JSON.stringify(parsedAllTodos, null, 2), {
+        encoding: "utf-8",
+      });
+
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify(
+          {
+            title: parsedAllTodos[todoIndex].title,
+            body,
+            createdAt: parsedAllTodos[todoIndex].createdAt,
+          },
+          null,
+          2
+        )
+      );
     });
   } else {
     res.end("Route Not Found");
@@ -48,6 +116,3 @@ const server = http.createServer((req, res) => {
 server.listen(5100, "127.0.0.1", () => {
   console.log("Server listening to port 5100");
 });
-
-// todos- Get - All todo
-// todos/create-todo POST Create todo
